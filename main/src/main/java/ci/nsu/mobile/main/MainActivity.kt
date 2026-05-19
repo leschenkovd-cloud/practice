@@ -1,5 +1,6 @@
 package ci.nsu.mobile.main
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -13,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     private lateinit var db: AppDatabase
@@ -35,25 +37,24 @@ class MainActivity : ComponentActivity() {
         var jokeText by remember { mutableStateOf("Загрузка...") }
 
         LaunchedEffect(Unit) {
-            val dao = db.jokeDao()
-            if (dao.count() == 0) {
-                listOf(
-                    "Колобок повесился.",
-                    "Идут два чукчи, один потерялся.",
-                    "- Алло, это пожарная? - Да. - У нас пожар! - А адрес? - А зачем? Приезжайте, сами увидите!"
-                ).forEach { dao.insert(Joke(text = it)) }
-            }
+            // Все операции с БД выносим в фоновый поток
+            withContext(Dispatchers.IO) {
+                val dao = db.jokeDao()
+                if (dao.count() == 0) {
+                    loadJokesFromFile(dao, this@MainActivity)
+                }
 
-            var joke = dao.getUnviewedJoke()
-            if (joke == null) {
-                dao.resetViewed()
-                joke = dao.getUnviewedJoke()
-            }
-            if (joke == null) joke = dao.getRandomJoke()
+                var joke = dao.getUnviewedJoke()
+                if (joke == null) {
+                    dao.resetViewed()
+                    joke = dao.getUnviewedJoke()
+                }
+                if (joke == null) joke = dao.getRandomJoke()
 
-            joke?.let {
-                dao.update(it.copy(isViewed = true))
-                jokeText = it.text
+                joke?.let {
+                    dao.update(it.copy(isViewed = true))
+                    jokeText = it.text
+                }
             }
         }
 
@@ -74,5 +75,17 @@ class MainActivity : ComponentActivity() {
                 Text("Редактировать")
             }
         }
+    }
+
+    // 📥 Метод загрузки из файла
+    private suspend fun loadJokesFromFile(dao: JokeDao, context: Context) {
+        val inputStream = context.resources.openRawResource(R.raw.jokes)
+        val content = inputStream.bufferedReader().use { it.readText() }
+
+        val jokes = content.split("---")
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+
+        jokes.forEach { dao.insert(Joke(text = it)) }
     }
 }
