@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 
+// ================= ENTITY =================
 @Entity(tableName = "jokes")
 data class Joke(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -12,6 +13,7 @@ data class Joke(
     val dateAdded: Long = System.currentTimeMillis()
 )
 
+// ================= DAO =================
 @Dao
 interface JokeDao {
     @Query("SELECT * FROM jokes ORDER BY isViewed ASC, dateAdded ASC")
@@ -23,7 +25,7 @@ interface JokeDao {
     @Query("SELECT * FROM jokes ORDER BY RANDOM() LIMIT 1")
     suspend fun getRandomJoke(): Joke?
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(joke: Joke)
 
     @Update
@@ -42,19 +44,27 @@ interface JokeDao {
     suspend fun count(): Int
 }
 
-@Database(entities = [Joke::class], version = 1)
+// ================= DATABASE =================
+@Database(entities = [Joke::class], version = 1, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun jokeDao(): JokeDao
 
     companion object {
+        @Volatile
         private var INSTANCE: AppDatabase? = null
 
         fun getInstance(context: Context): AppDatabase {
-            return INSTANCE ?: androidx.room.Room.databaseBuilder(
-                context.applicationContext,
-                AppDatabase::class.java,
-                "jokes_db"
-            ).build().also { INSTANCE = it }
+            return INSTANCE ?: synchronized(this) {
+                val instance = Room.databaseBuilder(
+                    context.applicationContext,
+                    AppDatabase::class.java,
+                    "jokes_db"
+                )
+                    .fallbackToDestructiveMigration()
+                    .build()
+                INSTANCE = instance
+                instance
+            }
         }
     }
 }
