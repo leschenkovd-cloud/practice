@@ -8,7 +8,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.runBlocking
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class EditJokeActivity : ComponentActivity() {
     private lateinit var db: AppDatabase
@@ -38,13 +40,11 @@ class EditJokeActivity : ComponentActivity() {
             topBar = {
                 TopAppBar(
                     title = { Text(if (jokeId == -1L) "Добавить" else "Edit") },
-                    navigationIcon = {
-                        IconButton(onClick = { finish() }) { Text("←") }
-                    },
+                    navigationIcon = { IconButton(onClick = { finish() }) { Text("←") } },
                     actions = {
                         TextButton(onClick = {
                             if (text.isNotBlank()) {
-                                runBlocking {
+                                lifecycleScope.launch(Dispatchers.IO) {
                                     if (jokeId == -1L) {
                                         db.jokeDao().insert(Joke(text = text))
                                     } else {
@@ -61,10 +61,7 @@ class EditJokeActivity : ComponentActivity() {
             TextField(
                 value = text,
                 onValueChange = { text = it },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(16.dp),
+                modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
                 label = { Text("Текст") },
                 maxLines = 10
             )

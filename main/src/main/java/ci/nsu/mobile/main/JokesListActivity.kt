@@ -4,7 +4,6 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.*
@@ -15,8 +14,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlinx.coroutines.runBlocking
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 class JokesListActivity : ComponentActivity() {
     private lateinit var db: AppDatabase
@@ -37,7 +38,7 @@ class JokesListActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun JokesListScreen(db: AppDatabase) {
-        val jokes by db.jokeDao().getAllJokes().collectAsStateWithLifecycle(initialValue = emptyList())
+        val jokes by db.jokeDao().getAllJokes().collectAsState(initial = emptyList())
         var editMode by remember { mutableStateOf(false) }
         var selected by remember { mutableStateOf(setOf<Long>()) }
         var showDeleteDialog by remember { mutableStateOf(false) }
@@ -46,16 +47,12 @@ class JokesListActivity : ComponentActivity() {
             topBar = {
                 TopAppBar(
                     title = { Text("Анекдоты") },
-                    navigationIcon = {
-                        IconButton(onClick = { finish() }) { Text("←") }
-                    },
+                    navigationIcon = { IconButton(onClick = { finish() }) { Text("←") } },
                     actions = {
                         TextButton(onClick = {
                             editMode = !editMode
                             selected = emptySet()
-                        }) {
-                            Text(if (editMode) "OK" else "Edit")
-                        }
+                        }) { Text(if (editMode) "OK" else "Edit") }
                     }
                 )
             },
@@ -114,7 +111,9 @@ class JokesListActivity : ComponentActivity() {
                 title = { Text("Удалить?") },
                 confirmButton = {
                     TextButton(onClick = {
-                        runBlocking { db.jokeDao().deleteByIds(selected.toList()) }
+                        lifecycleScope.launch(Dispatchers.IO) {
+                            db.jokeDao().deleteByIds(selected.toList())
+                        }
                         showDeleteDialog = false
                         selected = emptySet()
                         editMode = false

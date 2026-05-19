@@ -10,8 +10,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private lateinit var db: AppDatabase
@@ -35,9 +36,12 @@ class MainActivity : ComponentActivity() {
 
         LaunchedEffect(Unit) {
             val dao = db.jokeDao()
-
             if (dao.count() == 0) {
-                loadDefaultJokes(dao)
+                listOf(
+                    "Колобок повесился.",
+                    "Идут два чукчи, один потерялся.",
+                    "- Алло, это пожарная? - Да. - У нас пожар! - А адрес? - А зачем? Приезжайте, сами увидите!"
+                ).forEach { dao.insert(Joke(text = it)) }
             }
 
             var joke = dao.getUnviewedJoke()
@@ -45,9 +49,7 @@ class MainActivity : ComponentActivity() {
                 dao.resetViewed()
                 joke = dao.getUnviewedJoke()
             }
-            if (joke == null) {
-                joke = dao.getRandomJoke()
-            }
+            if (joke == null) joke = dao.getRandomJoke()
 
             joke?.let {
                 dao.update(it.copy(isViewed = true))
@@ -56,9 +58,7 @@ class MainActivity : ComponentActivity() {
         }
 
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -74,14 +74,5 @@ class MainActivity : ComponentActivity() {
                 Text("Редактировать")
             }
         }
-    }
-
-    private suspend fun loadDefaultJokes(dao: JokeDao) {
-        val jokes = listOf(
-            "Колобок повесился.",
-            "Идут два чукчи, один потерялся.",
-            "- Алло, это пожарная? - Да. - У нас пожар! - А адрес? - А зачем? Приезжайте, сами увидите!"
-        )
-        jokes.forEach { dao.insert(Joke(text = it)) }
     }
 }
