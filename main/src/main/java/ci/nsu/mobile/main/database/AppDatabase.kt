@@ -1,3 +1,4 @@
+/*
 package ci.nsu.mobile.main.database
 
 import android.content.Context
@@ -26,4 +27,4 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
     }
-}
+}*/

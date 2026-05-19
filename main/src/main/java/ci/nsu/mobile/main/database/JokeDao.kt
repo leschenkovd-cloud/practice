@@ -1,4 +1,6 @@
+/*
 package ci.nsu.mobile.main.database
+*/
 
 //import androidx.room.Dao
 //import androidx.room.Delete

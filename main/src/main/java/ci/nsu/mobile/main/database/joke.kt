@@ -1,3 +1,4 @@
+/*
 package ci.nsu.mobile.main.database
 
 import androidx.room.Entity
@@ -9,4 +10,4 @@ data class Joke(
     val text: String,
     val isViewed: Boolean = false,
     val dateAdded: Long = System.currentTimeMillis()
-)
+)*/
